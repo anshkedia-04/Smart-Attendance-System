@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Attendance System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(to right, #0f0f0f, #1a1a1a);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+            transition: background 0.5s ease-in-out;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00ffcc;
+            text-shadow: 0px 0px 10px rgba(0, 255, 204, 0.7);
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.4);
+            width: 400px;
+            text-align: center;
+        }
+
+        #dateTime {
+            font-size: 16px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+
+        select, button {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: none;
+        }
+
+        select {
+            background: #222;
+            color: #fff;
+            border: 1px solid #444;
+        }
+
+        button {
+            background: #00ffcc;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background: #00b38f;
+            box-shadow: 0px 0px 10px rgba(0, 255, 204, 0.7);
+        }
+
+        #attendanceList {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Smart Attendance System</h1>
+
+    <div class="container">
+        <div id="dateTime">Loading date & time...</div>
+
+        <label>Select your name:</label>
+        <select id="studentSelect">
+            {% for student in students %}
+                <option value="{{ student }}">{{ student }}</option>
+            {% endfor %}
+        </select>
+
+        <label>Select Slot:</label>
+        <select id="slotSelect">
+            {% for key, value in slots.items() %}
+                <option value="{{ key }}">{{ key }} ({{ value }})</option>
+            {% endfor %}
+        </select>
+
+        <button onclick="markAttendance()">Mark Attendance</button>
+        <button onclick="signOut()">Sign Out</button>
+        <button onclick="fetchAttendance()">View Attendance</button>
+
+        <div id="attendanceList"></div>
+    </div>
+
+    <script>
+        function updateDateTime() {
+    document.getElementById("dateTime").innerText = new Date().toLocaleString();
+}
+setInterval(updateDateTime, 1000);
+
+function markAttendance() {
+    let student = document.getElementById("studentSelect").value;
+    let slot = document.getElementById("slotSelect").value;
+
+    fetch("/mark_attendance", {
+        method: "POST",
+        body: new URLSearchParams({ student, slot })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        fetchAttendance(); // Update attendance list immediately
+    });
+}
+
+function signOut() {
+    let student = document.getElementById("studentSelect").value;
+    let slot = document.getElementById("slotSelect").value;
+
+    fetch("/sign_out", {
+        method: "POST",
+        body: new URLSearchParams({ student, slot })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        fetchAttendance(); // Update attendance list immediately
+    });
+}
+
+function fetchAttendance() {
+    fetch("/get_attendance")
+    .then(response => response.json())
+    .then(data => {
+        let attendanceList = document.getElementById("attendanceList");
+        attendanceList.innerHTML = "<h3>Attendance Records:</h3>";
+
+        if (Object.keys(data).length === 0) {
+            attendanceList.innerHTML += "<p>No attendance records found.</p>";
+            return;
+        }
+
+        for (let date in data) {
+            attendanceList.innerHTML += `<h4>${date}</h4><ul>`;
+
+            for (let slot in data[date]) {
+                attendanceList.innerHTML += `<li><b>${slot}:</b><ul>`;
+
+                for (let student in data[date][slot]) {
+                    let status = data[date][slot][student].status;
+                    let time = data[date][slot][student].time;
+                    attendanceList.innerHTML += `<li>${student} - ${status} at ${time}</li>`;
+                }
+
+                attendanceList.innerHTML += "</ul></li>";
+            }
+
+            attendanceList.innerHTML += "</ul>";
+        }
+    });
+}
+
+    </script>
+
+</body>
+</html>
